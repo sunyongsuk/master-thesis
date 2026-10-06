@@ -3,11 +3,622 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Master's Thesis</title>
+
+  <title>
+    RT-DETR과 SAM 2.1을 활용한 도로 파손 검출 및 보수면적 산정
+  </title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "Noto Sans KR",
+        Arial,
+        sans-serif;
+      line-height: 1.8;
+      color: #222;
+      background: #f5f7fa;
+    }
+
+    .container {
+      width: min(1100px, 92%);
+      margin: 0 auto;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #17365d, #315f8f);
+      color: white;
+      padding: 80px 20px 70px;
+      text-align: center;
+    }
+
+    .hero-label {
+      font-size: 0.95rem;
+      letter-spacing: 0.14em;
+      opacity: 0.85;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      max-width: 980px;
+      margin: 0 auto;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      line-height: 1.35;
+      font-weight: 700;
+    }
+
+    .english-title {
+      max-width: 900px;
+      margin: 24px auto 0;
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      line-height: 1.6;
+      opacity: 0.92;
+    }
+
+    .author {
+      margin-top: 35px;
+      font-size: 1.1rem;
+      line-height: 1.8;
+    }
+
+    .nav {
+      background: white;
+      border-bottom: 1px solid #e1e5ea;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-inner {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 10px;
+    }
+
+    .nav a {
+      color: #334155;
+      text-decoration: none;
+      padding: 9px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+
+    .nav a:hover {
+      background: #edf2f7;
+    }
+
+    main {
+      padding: 45px 0 70px;
+    }
+
+    section {
+      scroll-margin-top: 90px;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 35px 40px;
+      box-shadow: 0 8px 30px rgba(20, 40, 70, 0.06);
+      border: 1px solid #e8edf2;
+    }
+
+    .section-number {
+      display: inline-block;
+      font-size: 0.82rem;
+      color: #315f8f;
+      background: #eaf2fb;
+      padding: 5px 10px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      margin: 0 0 20px;
+      font-size: 1.75rem;
+      color: #17365d;
+    }
+
+    p {
+      margin: 0 0 15px;
+      text-align: justify;
+      word-break: keep-all;
+    }
+
+    .keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .keyword {
+      padding: 9px 15px;
+      border-radius: 999px;
+      background: #eef4fa;
+      border: 1px solid #d7e4f1;
+      color: #23496f;
+      font-size: 0.92rem;
+    }
+
+    .pipeline {
+      margin: 28px 0;
+      padding: 25px;
+      background: #f7f9fc;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      text-align: center;
+    }
+
+    .pipeline-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pipeline-box {
+      background: white;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 12px 17px;
+      min-width: 135px;
+      font-weight: 600;
+      color: #23496f;
+    }
+
+    .arrow {
+      font-size: 1.3rem;
+      color: #64748b;
+    }
+
+    .data-grid,
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 25px;
+    }
+
+    .data-item,
+    .result-item {
+      background: #f7f9fc;
+      border: 1px solid #e0e7ef;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .data-item strong,
+    .result-item strong {
+      display: block;
+      font-size: 1.5rem;
+      color: #17365d;
+      margin-bottom: 7px;
+    }
+
+    .result-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    .result-item strong {
+      font-size: 1.35rem;
+    }
+
+    .note {
+      margin-top: 22px;
+      padding: 18px 20px;
+      border-left: 4px solid #315f8f;
+      background: #f4f8fc;
+      border-radius: 6px;
+    }
+
+    footer {
+      background: #17365d;
+      color: white;
+      text-align: center;
+      padding: 32px 20px;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 850px) {
+      .data-grid,
+      .result-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .card {
+        padding: 28px 24px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .data-grid,
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding: 60px 18px 50px;
+      }
+
+      .card {
+        padding: 24px 20px;
+      }
+
+      .pipeline-row {
+        flex-direction: column;
+      }
+
+      .arrow {
+        transform: rotate(90deg);
+      }
+    }
+  </style>
 </head>
+
 <body>
-  <h1>석사학위 논문 소개</h1>
-  <p>선용석</p>
-  <p>부산대학교 정보융합공학과</p>
+
+<header class="hero">
+  <div class="container">
+
+    <div class="hero-label">
+      GRADUATION THESIS
+    </div>
+
+    <h1>
+      RT-DETR과 SAM 2.1을 활용한<br>
+      도로 파손 검출 및 보수면적 산정
+    </h1>
+
+    <div class="english-title">
+      Road Distress Detection and Repair Area Estimation
+      Using RT-DETR and SAM 2.1
+    </div>
+
+    <div class="author">
+      선용석<br>
+      부산대학교 정보융합공학과 AI전공
+    </div>
+
+  </div>
+</header>
+
+
+<nav class="nav">
+  <div class="nav-inner">
+
+    <a href="#keywords">키워드</a>
+    <a href="#background">배경</a>
+    <a href="#limitations">기존 한계</a>
+    <a href="#proposal">제안</a>
+    <a href="#results">결과</a>
+
+  </div>
+</nav>
+
+
+<main class="container">
+
+  <!-- 키워드 -->
+  <section id="keywords">
+    <div class="card">
+
+      <span class="section-number">KEYWORDS</span>
+      <h2>키워드</h2>
+
+      <div class="keywords">
+
+        <span class="keyword">
+          도로 파손 검출 · Road Distress Detection
+        </span>
+
+        <span class="keyword">
+          RT-DETR · Real-Time Detection Transformer
+        </span>
+
+        <span class="keyword">
+          SAM 2.1 · Segment Anything Model 2.1
+        </span>
+
+        <span class="keyword">
+          포트홀 검출 · Pothole Detection
+        </span>
+
+        <span class="keyword">
+          픽셀 단위 분할 · Pixel-Level Segmentation
+        </span>
+
+        <span class="keyword">
+          보수면적 산정 · Repair Area Estimation
+        </span>
+
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- 배경 -->
+  <section id="background">
+    <div class="card">
+
+      <span class="section-number">01 · BACKGROUND</span>
+      <h2>배경</h2>
+
+      <p>
+        도로 포장의 파손 상태를 정확하게 검출하고 그 크기를
+        정량적으로 산정하는 것은 효율적인 도로 유지관리와
+        보수계획 수립에 중요하다.
+      </p>
+
+      <p>
+        최근 도로 파손 자동 탐지 분야에서는 빠른 추론 속도와
+        비교적 높은 객체 검출 성능을 갖는 YOLO 계열의 모델이
+        널리 활용되고 있다.
+      </p>
+
+      <p>
+        그러나 실제 도로주행 영상에는 차선, 균열, 그림자,
+        기존 보수 흔적 등 파손과 유사한 다양한 시각적 요소가
+        함께 존재하므로, 복잡한 도로 환경에서 실제 파손을
+        보다 정확하게 구분하기 위한 추가적인 성능 개선이 필요하다.
+      </p>
+
+      <p>
+        또한 실제 보수계획에서는 파손의 존재 여부뿐 아니라
+        실제 보수가 필요한 면적을 정확하게 산정하는 과정도 중요하다.
+      </p>
+
+    </div>
+  </section>
+
+
+  <!-- 기존 한계 -->
+  <section id="limitations">
+    <div class="card">
+
+      <span class="section-number">02 · LIMITATIONS</span>
+      <h2>기존 한계</h2>
+
+      <p>
+        YOLO 계열을 포함한 기존의 바운딩 박스 기반 객체 검출 방식은
+        파손 객체의 위치를 빠르게 탐지하는 데 효과적이지만,
+        복잡한 실제 도로 영상에서는 파손과 시각적으로 유사한
+        배경 영역을 잘못 검출하는 False Positive 문제가 발생할 수 있다.
+      </p>
+
+      <p>
+        또한 바운딩 박스는 실제 파손 경계뿐 아니라 주변의
+        정상 포장 영역까지 함께 포함하므로, 이를 그대로 면적 산정에
+        사용할 경우 실제 파손면적보다 크게 계산될 가능성이 있다.
+      </p>
+
+      <p>
+        따라서 기존 YOLO 기반 탐지 방식보다 높은 검출 성능을
+        확보하면서도 실제 파손의 경계를 보다 정밀하게 추출할 수 있는
+        방법이 필요하다.
+      </p>
+
+    </div>
+  </section>
+
+
+  <!-- 제안 -->
+  <section id="proposal">
+    <div class="card">
+
+      <span class="section-number">03 · PROPOSED METHOD</span>
+      <h2>제안</h2>
+
+      <p>
+        본 연구에서는 도로 파손 탐지에 널리 활용되는 YOLO 계열의
+        성능을 기준으로, Transformer 기반 RT-DETR과 SAM 2.1을
+        결합한 도로 파손 검출 및 보수면적 산정 프레임워크를 제안한다.
+      </p>
+
+      <p>
+        RT-DETR은 Transformer 기반 구조를 이용하여 도로 영상
+        전체의 전역적 문맥 정보를 파악하고, 개별 파손 후보뿐 아니라
+        주변 도로 구조 및 다양한 시각적 패턴과의 관계를 함께 고려한다.
+        이를 통해 복잡한 실제 도로주행 환경에서 실제 도로 파손과
+        시각적으로 유사한 배경 영역을 보다 효과적으로 구분하는 것을
+        목표로 한다.
+      </p>
+
+      <p>
+        이후 RT-DETR이 생성한 bounding box를 SAM 2.1의 prompt로
+        입력하여 실제 파손 영역을 pixel-level mask로 변환한다.
+        이를 통해 단순한 바운딩 박스 면적이 아니라 실제 파손 형상에
+        보다 가까운 영역을 기준으로 보수면적을 산정하고자 한다.
+      </p>
+
+
+      <div class="pipeline">
+
+        <div class="pipeline-row">
+
+          <div class="pipeline-box">
+            도로주행 영상
+          </div>
+
+          <div class="arrow">→</div>
+
+          <div class="pipeline-box">
+            RT-DETR
+          </div>
+
+          <div class="arrow">→</div>
+
+          <div class="pipeline-box">
+            파손 검출
+          </div>
+
+          <div class="arrow">→</div>
+
+          <div class="pipeline-box">
+            SAM 2.1
+          </div>
+
+          <div class="arrow">→</div>
+
+          <div class="pipeline-box">
+            Pixel-Level Mask
+          </div>
+
+          <div class="arrow">→</div>
+
+          <div class="pipeline-box">
+            보수면적 산정
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <p>
+        모델은 총 33,605장의 도로 영상을 활용한 2단계 학습 방식으로
+        구성하였다.
+      </p>
+
+      <div class="data-grid">
+
+        <div class="data-item">
+          <strong>9,131</strong>
+          1단계 정제 데이터
+        </div>
+
+        <div class="data-item">
+          <strong>18,297</strong>
+          2단계 실제 도로주행 데이터
+        </div>
+
+        <div class="data-item">
+          <strong>6,177</strong>
+          최종 평가용 실제 도로주행 데이터
+        </div>
+
+      </div>
+
+      <div class="note">
+        1단계에서는 정제 데이터를 이용해 기본적인 파손 검출 능력을
+        학습하였고, 2단계에서는 실제 도로주행에서 수집된 영상을
+        이용하여 보다 복잡한 도로 환경에 대응할 수 있도록
+        파인튜닝하였다.
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- 결과 -->
+  <section id="results">
+    <div class="card">
+
+      <span class="section-number">04 · RESULTS</span>
+      <h2>결과</h2>
+
+      <p>
+        현재 포트홀 평가에서는 총 300장의 도로 영상을 사용하였으며,
+        이 중 41장에는 65개의 검수·보정된 포트홀 객체가 포함되어 있고,
+        나머지 259장은 포트홀이 없는 영상으로 구성하여
+        오검출(False Positive) 성능도 함께 평가하였다.
+      </p>
+
+      <p>
+        YOLO11+SAM 2.1 파이프라인과 비교한 결과,
+        RT-DETR+SAM 2.1 파이프라인은 Recall, Precision,
+        F1 score에서 향상된 성능을 나타냈으며,
+        포트홀 건수오차율과 세그멘테이션 면적오차율도 감소하였다.
+      </p>
+
+
+      <div class="result-grid">
+
+        <div class="result-item">
+          <strong>+64%</strong>
+          Recall
+        </div>
+
+        <div class="result-item">
+          <strong>+186%</strong>
+          Precision
+        </div>
+
+        <div class="result-item">
+          <strong>+178%</strong>
+          F1 Score
+        </div>
+
+        <div class="result-item">
+          <strong>-44%</strong>
+          Count Error
+        </div>
+
+        <div class="result-item">
+          <strong>-34%</strong>
+          Area Error
+        </div>
+
+      </div>
+
+
+      <p style="margin-top: 28px;">
+        Mask 형상 정보를 이용한 후처리는 검출된 실제 포트홀을
+        유지하면서 False Positive mask를 추가적으로 감소시키는 데
+        기여하였다.
+      </p>
+
+      <p>
+        이러한 결과는 Transformer 기반 RT-DETR의 전역적 문맥 활용과
+        SAM 2.1의 정밀한 영역 분할을 결합하는 방식이 기존 YOLO 기반
+        파이프라인보다 도로 파손 검출 및 면적 산정 성능을 개선할
+        가능성이 있음을 보여준다.
+      </p>
+
+
+      <div class="note">
+        향후에는 반복적으로 오검출되는 도로 배경 패턴을
+        hard-negative로 추가 학습하고, 검출 박스 및 SAM mask의
+        형상 정보를 활용한 False Positive 억제 기법을 적용하여
+        포트홀 검출 성능을 개선할 예정이다.
+        이후 포트홀뿐 아니라 다른 도로 파손 유형으로 평가 범위를
+        확대하고, 최종적으로 6,177장의 정제되지 않은 실제 도로주행
+        영상을 이용하여 실제 고속도로 환경에서의 일반화 성능을
+        검증할 계획이다.
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+
+<footer>
+  <div>
+    Master's Thesis · Pusan National University
+  </div>
+
+  <div style="margin-top: 6px; opacity: 0.8;">
+    Department of Information Convergence Engineering
+  </div>
+</footer>
+
 </body>
 </html>
